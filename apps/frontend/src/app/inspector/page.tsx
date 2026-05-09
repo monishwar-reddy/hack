@@ -242,9 +242,11 @@ export default function Page() {
   return (
     <ClientOnly>
       <CopilotKitProvider
-        runtimeUrl="/api/copilot"
-        showDevConsole={false}
-        threadId={threadId}
+        {...({
+          runtimeUrl: "/api/copilot",
+          showDevConsole: false,
+          threadId: threadId,
+        } as any)}
       >
         <HomePage threadId={threadId} setThreadId={handleThreadChange} />
       </CopilotKitProvider>
