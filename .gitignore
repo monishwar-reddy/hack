@@ -37,3 +37,8 @@ PLAN.md
 
 # Local Netlify folder
 .netlify
+
+# npm logs
+npm_log.txt
+npm_output.txt
+npm_output2.txt
