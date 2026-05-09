@@ -17,6 +17,8 @@ import {
   SquarePen,
   Sun,
   Trash2,
+  Activity,
+  PanelLeft,
 } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -41,45 +43,15 @@ interface DrawerThread {
 const THREAD_ENTRY_ANIMATION_MS = 420;
 const TITLE_ANIMATION_MS = 360;
 const UNTITLED_THREAD_LABEL = "New thread";
-const RUNTIME_BASE_PATH = "/api/copilotkit";
+const RUNTIME_BASE_PATH = "/api/copilot";
 
 const DOC_LINKS: Array<{
   label: string;
   href: string;
   icon: typeof BookOpen;
+  iconProps?: any;
   external?: boolean;
-}> = [
-  {
-    label: "About this Kit",
-    href: "/about",
-    icon: Info,
-    external: false,
-  },
-  {
-    label: "Tool surface",
-    href: "/showcase",
-    icon: Sparkles,
-    external: false,
-  },
-  {
-    label: "Documentation",
-    href: "https://docs.copilotkit.ai/",
-    icon: BookOpen,
-    external: true,
-  },
-  {
-    label: "Intelligence Platform",
-    href: "https://docs.copilotkit.ai/learn/intelligence-platform",
-    icon: Sparkles,
-    external: true,
-  },
-  {
-    label: "Coding Agents",
-    href: "https://docs.copilotkit.ai/coding-agents",
-    icon: Code2,
-    external: true,
-  },
-];
+}> = [];
 
 function formatRelativeTime(isoTimestamp: string): string {
   const timestamp = new Date(isoTimestamp);
@@ -151,20 +123,33 @@ export default function ThreadsDrawer({
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
   };
 
-  const {
-    threads,
-    archiveThread,
-    deleteThread,
-    error,
-    isLoading,
-    hasMoreThreads,
-    isFetchingMoreThreads,
-    fetchMoreThreads,
-  } = useThreads({
-    agentId,
-    includeArchived: showArchived,
-    limit: 20,
-  });
+  // MOCK DATA + LOCAL STORAGE for demo
+  const [threads, setThreads] = useState<DrawerThread[]>([]);
+  const isLoading = false;
+
+  useEffect(() => {
+    const savedThreads = JSON.parse(localStorage.getItem("tutor_threads") || "[]");
+    setThreads(savedThreads);
+  }, [threadId]);
+
+  const archiveThread = async (id: string) => {
+    const updated = threads.map(t => t.id === id ? { ...t, archived: true } : t);
+    setThreads(updated);
+    localStorage.setItem("tutor_threads", JSON.stringify(updated));
+  };
+
+  const deleteThread = async (id: string) => {
+    const updated = threads.filter(t => t.id !== id);
+    setThreads(updated);
+    localStorage.setItem("tutor_threads", JSON.stringify(updated));
+    if (threadId === id) onThreadChange(undefined);
+  };
+
+  const hasMoreThreads = false;
+  const isFetchingMoreThreads = false;
+  const fetchMoreThreads = async () => {};
+  const error = null;
+
 
   const restoreThread = useCallback(
     async (id: string) => {
@@ -358,18 +343,19 @@ export default function ThreadsDrawer({
 
         <div className={styles.drawerSurface}>
           <div className={styles.brandRow}>
-            <img
-              alt="CopilotKit"
-              className={styles.brandLogo}
-              src="/copilotkit-logo.svg"
-            />
+            <div className={styles.navItemFlex}>
+              <div className={cx(styles.navItem, styles.navItemBrand)}>
+                <Activity size={18} className="text-emerald-400" />
+                <span className="font-bold text-gray-100">InspectorAI Pro</span>
+              </div>
+            </div>
             <button
-              aria-label="Collapse threads drawer"
+              aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
               className={styles.iconButton}
+              onClick={() => setIsOpen(!isOpen)}
               type="button"
-              onClick={() => setIsOpen(false)}
             >
-              <ChevronLeft size={18} />
+              <PanelLeft aria-hidden size={16} />
             </button>
           </div>
 
@@ -377,17 +363,20 @@ export default function ThreadsDrawer({
             <button
               className={styles.navItem}
               type="button"
-              onClick={() => onThreadChange(undefined)}
+              onClick={() => {
+                onThreadChange(undefined);
+                window.location.reload(); // Force refresh to clear chat for "New Search"
+              }}
             >
-              <SquarePen aria-hidden size={16} />
-              <span>New chat</span>
+              <Plus aria-hidden size={16} />
+              <span>New Search</span>
             </button>
             <div className={cx(styles.navItem, styles.searchRow)}>
               <Search aria-hidden size={16} />
               <input
                 aria-label="Search threads"
                 className={styles.searchInput}
-                placeholder="Search threads"
+                placeholder="Search Previous Data"
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -395,31 +384,10 @@ export default function ThreadsDrawer({
             </div>
           </nav>
 
-          <nav aria-label="Resources" className={styles.navList}>
-            {DOC_LINKS.map(({ label, href, icon: Icon, external = true }) => (
-              <a
-                key={href}
-                className={styles.navItem}
-                href={href}
-                {...(external
-                  ? { target: "_blank", rel: "noopener noreferrer" }
-                  : {})}
-              >
-                <Icon aria-hidden size={16} />
-                <span>{label}</span>
-                {external ? (
-                  <ExternalLink
-                    aria-hidden
-                    className={styles.navItemExternal}
-                    size={12}
-                  />
-                ) : null}
-              </a>
-            ))}
-          </nav>
+          {/* Resources nav removed for focused demo */}
 
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionLabel}>Threads</span>
+            <span className={styles.sectionLabel}>Previous Data</span>
             <div className={styles.sectionActions}>
               <button
                 aria-label={
@@ -437,10 +405,13 @@ export default function ThreadsDrawer({
                 <Filter size={14} />
               </button>
               <button
-                aria-label="New chat"
+                aria-label="New Search"
                 className={cx(styles.iconButton, styles.sectionActionButton)}
                 type="button"
-                onClick={() => onThreadChange(undefined)}
+                onClick={() => {
+                  onThreadChange(undefined);
+                  window.location.reload();
+                }}
               >
                 <Plus size={14} />
               </button>
@@ -451,7 +422,7 @@ export default function ThreadsDrawer({
             {error ? (
               <div className={styles.emptyState}>
                 <p className={styles.emptyTitle}>
-                  Couldn&rsquo;t load threads
+                  Couldn&rsquo;t load previous data
                 </p>
                 <p className={styles.emptyMessage}>
                   The thread list failed to load. Try reloading the page.
@@ -484,8 +455,8 @@ export default function ThreadsDrawer({
                   {isSearching
                     ? `No threads match "${searchQuery.trim()}".`
                     : showArchived
-                      ? "No archived threads."
-                      : "No threads yet. Start a new chat to begin."}
+                      ? "No archived records."
+                      : "No previous data yet. Start a new search to begin."}
                 </p>
                 {isSearching && hasMoreThreads && (
                   <button
@@ -617,25 +588,10 @@ export default function ThreadsDrawer({
           </div>
 
           <div className={styles.drawerFooter}>
-            <a
-              className={cx(styles.navItem, styles.navItemFlex)}
-              href="https://www.copilotkit.ai/"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <img
-                alt=""
-                aria-hidden
-                className={styles.navItemMark}
-                src="/copilotkit-logo-mark.svg"
-              />
-              <span>copilotkit.ai</span>
-              <ExternalLink
-                aria-hidden
-                className={styles.navItemExternal}
-                size={12}
-              />
-            </a>
+            <div className={cx(styles.navItem, styles.navItemFlex)}>
+              <Activity size={16} className="text-emerald-400" />
+              <span className="text-xs font-medium text-gray-500">Powered by Inspection AI</span>
+            </div>
             <button
               aria-label={
                 resolvedTheme === "dark"

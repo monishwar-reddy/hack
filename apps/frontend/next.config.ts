@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
   // pulls in express, which Next can't bundle (dynamic require in view.js).
   // Same-origin proxy keeps the drawer's relative fetches (e.g.
   // PATCH /api/copilotkit/threads/{id}) working without CORS.
+  output: "standalone",
   async rewrites() {
     return [
       {
